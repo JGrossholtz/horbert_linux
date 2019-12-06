@@ -29,7 +29,7 @@ HORBERT_FOLDERS_LIST=(
 init_horbert_folder () {
 	workpath="$1/$WORKDIR"
 
-	mkdir -p "$workpath"
+	mkdir -p $workpath
 	for folder in "${HORBERT_FOLDERS_LIST[@]}"; do
 		mkdir -p "$workpath/$folder"
 	done
