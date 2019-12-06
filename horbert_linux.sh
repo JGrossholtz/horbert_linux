@@ -1,6 +1,7 @@
 #!/bin/bash
 
 WORKDIR="horbert_workdir"
+TMP_DIRNAME=".tmp"
 
 usage () {
 	echo "Here is how to use $0:"
@@ -35,6 +36,67 @@ init_horbert_folder () {
 
 	echo "We just created the Horbert: $workpath"
 	echo "You can place your mp3 files there and use this script later for automated conversion and copy"
+}
+
+convert_all_mp3_to_wav_in_directory () {
+	convert_dir="$1"
+	tmpdir="$convert_dir/$TMP_DIRNAME"
+
+	if [ ! -d "$convert_dir" ] ; then
+		echo "$convert_dir is not a valid directory"
+		exit 4
+	fi
+
+	if [ -d "$tmpdir" ] ; then
+		rm -rf "$tmpdir"
+	fi
+
+	mkdir -p "$tmpdir"
+
+	file_no=0
+	for file in "$convert_dir"/*.mp3 ; do
+		echo ----- "$file"
+		ffmpeg -i "$file" -acodec pcm_s16le -ac 1 -ar 32000 "$tmpdir"/"$file_no".WAV 2> /dev/null
+		file_no=$((file_no+1))
+	done
+
+}
+
+convert_mp3_to_horbert () {
+	if [ -z "$input_path" ] && [ -z "$output_path" ] ; then
+		echo ERROR: one directory variable is not set
+		exit 1
+	fi
+
+	if [ ! -d "$input_path" ] ; then
+		echo "$input_path is not a valid directory"
+		exit 2
+	fi
+
+	if [ ! -d "$output_path" ] ; then
+		echo "$output_path is not a valid directory"
+		exit 3
+	fi
+
+
+	output_folder_no=0
+	for dir in "${HORBERT_FOLDERS_LIST[@]}"; do
+		if [ -d "$input_path"/"$dir" ]; then
+			convert_all_mp3_to_wav_in_directory "$input_path"/"$dir"
+
+			if [ -d "$output_path"/"$output_folder_no" ]; then
+				rm -f "$output_path"/"$output_folder_no"/*
+			else
+				mkdir -p "$output_path"/"$output_folder_no"
+			fi
+
+			cp -f "$input_path"/"$dir"/"$TMP_DIRNAME"/* "$output_path"/"$output_folder_no"
+		fi
+
+		output_folder_no=$((output_folder_no+1))
+		sync
+	done
+
 }
 
 ARGUMENT_LIST=(
@@ -79,5 +141,9 @@ while [[ $# -gt 1 ]]; do
     esac
     shift
 done
+
+convert_mp3_to_horbert "$input_path" "$output_path"
+
+echo "Your MP3 copy is finished ! Please disconnect your SD card properly"
 
 exit 0
